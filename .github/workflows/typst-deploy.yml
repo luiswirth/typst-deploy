@@ -41,6 +41,7 @@ jobs:
           mkdir public
           typst compile ${{ inputs.entry_file }} public/${{ inputs.output_name }} \
             --font-path typst-deploy-assets/fonts \
+            --root . \
             2>&1 | tee compile.log
 
       - name: Create Landing Page
