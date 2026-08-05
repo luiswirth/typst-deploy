@@ -12,7 +12,7 @@ permissions:
 
 jobs:
   deploy:
-    uses: luiswirth/typst-deploy/.github/workflows/typst-deploy.yml@v1
+    uses: luiswirth/typst-deploy/.github/workflows/typst-deploy.yml@v2
     with:
-      entry_file: main.typ
-      output_name: main.pdf
+      documents: |
+        src/main.typ document.pdf
