@@ -3,13 +3,14 @@ name: Reusable Typst Deploy
 on:
   workflow_call:
     inputs:
-      entry_file:
+      documents:
+        description: >
+          The documents to compile, one per line, each a Typst file and
+          optionally the name it is published under. The name defaults to the
+          file's own with a pdf extension. One document is served at the Pages
+          URL itself, several are listed there.
         required: true
         type: string
-      output_name:
-        required: false
-        type: string
-        default: document.pdf
       package_path:
         description: >
           Repository-relative path to a Typst local package root, the directory
@@ -47,20 +48,42 @@ jobs:
 
       - name: Compile Typst
         env:
+          DOCUMENTS: ${{ inputs.documents }}
           PACKAGE_PATH: ${{ inputs.package_path }}
         run: |
           mkdir public
           if [ -n "$PACKAGE_PATH" ]; then
             export TYPST_PACKAGE_PATH="$PWD/$PACKAGE_PATH"
           fi
-          typst compile ${{ inputs.entry_file }} public/${{ inputs.output_name }} \
-            --font-path typst-deploy-assets/fonts \
-            --root . \
-            2>&1 | tee compile.log
+          # Read from a file rather than a pipe, so a failing compile fails the
+          # job instead of a subshell.
+          printf '%s\n' "$DOCUMENTS" > documents.list
+          while read -r entry name; do
+            [ -n "$entry" ] || continue
+            name=${name:-$(basename "${entry%.typ}").pdf}
+            typst compile "$entry" "public/$name" \
+              --font-path typst-deploy-assets/fonts \
+              --root .
+          done < documents.list
 
       - name: Create Landing Page
         run: |
-          echo "<!DOCTYPE html><meta http-equiv=\"refresh\" content=\"0; url=${{ inputs.output_name }}\">" > public/index.html
+          set -- public/*.pdf
+          if [ $# -eq 1 ]; then
+            printf '<!DOCTYPE html><meta http-equiv="refresh" content="0; url=%s">\n' \
+              "$(basename "$1")" > public/index.html
+          else
+            {
+              printf '<!DOCTYPE html><meta charset="utf-8"><title>%s</title>\n' \
+                "$GITHUB_REPOSITORY"
+              printf '<h1>%s</h1><ul>\n' "$GITHUB_REPOSITORY"
+              for pdf; do
+                printf '<li><a href="%s">%s</a></li>\n' \
+                  "$(basename "$pdf")" "$(basename "$pdf")"
+              done
+              printf '</ul>\n'
+            } > public/index.html
+          fi
 
       - uses: actions/upload-pages-artifact@v5
         with:

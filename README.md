@@ -7,25 +7,39 @@ It also holds the fonts the compile runs with, checked out alongside the documen
 ## Use
 
 Enable Pages for the repository with GitHub Actions as the source,
+which takes one call and has to happen before the first run,
+
+```bash
+gh api -X POST repos/<owner>/<repo>/pages -f build_type=workflow
+```
+
 and copy `templates/typst-deploy.yml` to `.github/workflows/`:
 
 ```yaml
 jobs:
   deploy:
-    uses: luiswirth/typst-deploy/.github/workflows/typst-deploy.yml@v1
+    uses: luiswirth/typst-deploy/.github/workflows/typst-deploy.yml@v2
     with:
-      entry_file: src/main.typ
-      output_name: paper.pdf
+      documents: |
+        src/main.typ paper.pdf
 ```
-
-The PDF is served at the Pages URL under `output_name`,
-and the landing page redirects to it.
 
 | input | what it is |
 | --- | --- |
-| `entry_file` | the document to compile, relative to the repository root |
-| `output_name` | the file name the PDF is published under |
+| `documents` | the documents to compile, one per line |
 | `package_path` | a local package root, for a library the repository vendors |
+
+A line names a Typst file and the name it is published under,
+the name defaulting to the file's own with a pdf extension,
+so `test/showcase.typ` alone becomes `showcase.pdf`.
+One document is served at the Pages URL itself, through a landing page that
+redirects to it, so that the URL is the document.
+Several are listed on that page instead.
+
+A Pages site is public even when its repository is private,
+private Pages being an Enterprise Cloud feature,
+so making the repository private hides the sources and publishes the PDF.
+A document that may not be read yet is one that is not deployed yet.
 
 The compile runs with the repository root as the Typst root,
 so a document may read any file it contains.
