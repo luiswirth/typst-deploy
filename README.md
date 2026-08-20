@@ -18,7 +18,7 @@ and copy `templates/typst-deploy.yml` to `.github/workflows/`:
 ```yaml
 jobs:
   deploy:
-    uses: luiswirth/typst-deploy/.github/workflows/typst-deploy.yml@v2
+    uses: luiswirth/typst-deploy/.github/workflows/typst-deploy.yml@v3
     with:
       documents: |
         src/main.typ paper.pdf
@@ -27,7 +27,6 @@ jobs:
 | input | what it is |
 | --- | --- |
 | `documents` | the documents to compile, one per line |
-| `package_path` | a local package root, for a library the repository vendors |
 
 A line names a Typst file and the name it is published under,
 the name defaulting to the file's own with a pdf extension,
@@ -43,22 +42,17 @@ A document that may not be read yet is one that is not deployed yet.
 
 The compile runs with the repository root as the Typst root,
 so a document may read any file it contains.
-Submodules and LFS objects are checked out before it.
+LFS objects are checked out before it.
 
-## Local packages
+## The document's environment
 
-A repository that imports a library as `@local/<name>:<version>`
-must make that library present in the checkout, a submodule being the usual way,
-and name the directory holding `local/<name>/<version>` in `package_path`:
+The compile runs inside the repository's own `devShell`,
+so the Typst it is deployed with is the one it is written with,
+and a library the flake puts on `TYPST_PACKAGE_PATH` resolves remotely
+as it does locally.
 
-```yaml
-      package_path: lib/dottyp/pkg
-```
-
-The workflow exports it as `TYPST_PACKAGE_PATH`,
-which is the same variable a local build sets,
-so remote and local resolve the import the same way.
-Left empty, nothing is exported and only Typst Universe packages resolve.
+A repository deployed this way therefore needs a flake
+whose default `devShell` carries Typst.
 
 ## Fonts
 
