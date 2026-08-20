@@ -11,14 +11,6 @@ on:
           URL itself, several are listed there.
         required: true
         type: string
-      package_path:
-        description: >
-          Repository-relative path to a Typst local package root, the directory
-          holding local/<name>/<version>. A repository that vendors its library
-          as a submodule points here, and @local imports resolve against it.
-        required: false
-        type: string
-        default: ""
 
 permissions:
   contents: read
@@ -36,7 +28,6 @@ jobs:
       - uses: actions/checkout@v6
         with:
           lfs: true
-          submodules: recursive
 
       - name: Checkout typst-deploy (fonts)
         uses: actions/checkout@v6
@@ -44,27 +35,28 @@ jobs:
           repository: luiswirth/typst-deploy
           path: typst-deploy-assets
 
-      - uses: typst-community/setup-typst@v5
+      - uses: cachix/install-nix-action@v31
 
+      # The document's own devShell carries both the Typst it is written for
+      # and the libraries it imports, so a deployment compiles it the way its
+      # author does.
       - name: Compile Typst
         env:
           DOCUMENTS: ${{ inputs.documents }}
-          PACKAGE_PATH: ${{ inputs.package_path }}
         run: |
           mkdir public
-          if [ -n "$PACKAGE_PATH" ]; then
-            export TYPST_PACKAGE_PATH="$PWD/$PACKAGE_PATH"
-          fi
           # Read from a file rather than a pipe, so a failing compile fails the
           # job instead of a subshell.
           printf '%s\n' "$DOCUMENTS" > documents.list
-          while read -r entry name; do
-            [ -n "$entry" ] || continue
-            name=${name:-$(basename "${entry%.typ}").pdf}
-            typst compile "$entry" "public/$name" \
-              --font-path typst-deploy-assets/fonts \
-              --root .
-          done < documents.list
+          nix develop --command sh -euc '
+            while read -r entry name; do
+              [ -n "$entry" ] || continue
+              name=${name:-$(basename "${entry%.typ}").pdf}
+              typst compile "$entry" "public/$name" \
+                --font-path typst-deploy-assets/fonts \
+                --root .
+            done < documents.list
+          '
 
       - name: Create Landing Page
         run: |
