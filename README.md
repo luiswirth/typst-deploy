@@ -1,28 +1,29 @@
 # typst-deploy
 
-A reusable GitHub workflow that compiles a Typst document and deploys the PDF to Cloudflare Pages,
+A reusable GitHub workflow that compiles a Typst document and deploys the PDF to a Cloudflare Worker,
 so a document repository carries a caller of a dozen lines instead of a build of its own.
 It also holds the fonts the compile runs with, checked out alongside the document.
 
 ## Use
 
-Create a Cloudflare Pages project named after the repository,
-and give the repository the two secrets the deploy authenticates with,
-a token allowed to edit Cloudflare Pages and the account it belongs to.
-Both have to happen before the first run:
+Give the repository the two secrets the deploy authenticates with,
+a token allowed to edit Cloudflare Workers scripts and the account it belongs to,
+before the first run:
 
 ```bash
-wrangler pages project create <repo> --production-branch=main
 gh secret set CLOUDFLARE_API_TOKEN -R <owner>/<repo>
 gh secret set CLOUDFLARE_ACCOUNT_ID -R <owner>/<repo>
 ```
+
+The first run creates the Worker, named after the repository.
+Its custom domain is added once, after that.
 
 Then copy `templates/typst-deploy.yml` to `.github/workflows/`:
 
 ```yaml
 jobs:
   deploy:
-    uses: luiswirth/typst-deploy/.github/workflows/typst-deploy.yml@v4
+    uses: luiswirth/typst-deploy/.github/workflows/typst-deploy.yml@v5
     with:
       documents: |
         src/main.typ paper.pdf
